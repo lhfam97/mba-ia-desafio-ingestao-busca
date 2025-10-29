@@ -1,30 +1,26 @@
 import os
-import logging
 from dotenv import load_dotenv
+from loguru import logger
 from langchain_postgres import PGVector
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
 
-
-# ------------------------------------------------------------
-# Logging Configuration
-# ------------------------------------------------------------
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
-logger = logging.getLogger(__name__)
-
-# ------------------------------------------------------------
-# Environment Setup
-# ------------------------------------------------------------
 load_dotenv()
 REQUIRED_ENV_VARS = ["PDF_PATH", "PGVECTOR_URL", "PGVECTOR_COLLECTION"]
 
+
 def validate_env():
+    """
+    Validates required environment variables.
+
+    Checks for the presence of each environment variable specified in REQUIRED_ENV_VARS.
+    Logs errors and raises EnvironmentError if any required variable is not set.
+
+    Raises:
+        EnvironmentError: If a required environment variable is missing.
+    """
     logger.info("Validating required environment variables...")
     for var in REQUIRED_ENV_VARS:
         value = os.getenv(var)
@@ -35,27 +31,38 @@ def validate_env():
     logger.info("Environment variables validated successfully.")
 
 
-# ------------------------------------------------------------
-# PDF Loading & Splitting
-# ------------------------------------------------------------
 def load_and_split_pdf(pdf_path: str):
+    """
+    Loads a PDF and splits its content into text chunks.
+
+    Uses PyPDFLoader to read the PDF and RecursiveCharacterTextSplitter to split text into chunks.
+    Enriches chunks with filtered metadata.
+
+    Args:
+        pdf_path (str): Path to the PDF file.
+
+    Returns:
+        list: List of Document objects containing split text chunks.
+
+    Raises:
+        ValueError: If no pages are found or no text chunks are created from the PDF.
+    """
     logger.info(f"Loading PDF from path: {pdf_path}")
     loader = PyPDFLoader(pdf_path)
-    
     docs = loader.load()
     logger.info(f"Loaded {len(docs)} pages from PDF.")
 
     if not docs:
         raise ValueError(f"No pages found in PDF: {pdf_path}")
-    
+
     logger.info("Splitting PDF content into text chunks...")
-    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150,add_start_index=False)
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150, add_start_index=False)
     splits = splitter.split_documents(docs)
     logger.info(f"Split PDF into {len(splits)} text chunks.")
 
     if not splits:
         raise ValueError("No text chunks were created from the PDF.")
-    
+
     logger.info("Enriching chunks with filtered metadata...")
     enriched = [
         Document(
@@ -65,13 +72,24 @@ def load_and_split_pdf(pdf_path: str):
         for d in splits
     ]
     logger.info("Document enrichment completed.")
-    
+
     return enriched
 
-# ------------------------------------------------------------
-# Embedding & Storing in PGVector
-# ------------------------------------------------------------
+
 def store_documents(docs):
+    """
+    Stores Document objects in a PGVector collection after embedding.
+
+    Uses OpenAIEmbeddings to convert documents into embeddings and stores them using PGVector.
+
+    Args:
+        docs (list): List of Document objects to store.
+
+    Returns:
+        None
+
+    Logs progress, number of stored documents, and success message.
+    """
     logger.info("Initializing embedding and database storage pipeline...")
     model_name = os.getenv("OPENAI_MODEL", "text-embedding-3-small")
     collection_name = os.getenv("PGVECTOR_COLLECTION")
@@ -79,7 +97,7 @@ def store_documents(docs):
 
     logger.info(f"Using OpenAI embedding model: {model_name}")
     logger.info(f"Target PGVector collection: {collection_name}")
-    
+
     embeddings = OpenAIEmbeddings(model=model_name)
     store = PGVector(
         embeddings=embeddings,
@@ -95,10 +113,17 @@ def store_documents(docs):
     logger.info(f"Successfully ingested {len(docs)} documents into PGVector collection '{collection_name}'.")
 
 
-# ------------------------------------------------------------
-# Ingestion Pipeline
-# ------------------------------------------------------------
 def ingest_pdf():
+    """
+    Orchestrates the PDF ingestion pipeline.
+
+    Validates environment variables, loads and splits PDF content, and stores documents in PGVector.
+
+    Returns:
+        None
+
+    Logs progress and completion messages throughout the process.
+    """
     logger.info("Starting PDF ingestion pipeline...")
     validate_env()
 
@@ -110,11 +135,14 @@ def ingest_pdf():
 
     logger.info("PDF ingestion pipeline completed successfully.")
 
-# ------------------------------------------------------------
-# Entry Point
-# ------------------------------------------------------------
+
 if __name__ == "__main__":
+    """
+    Entry point for script execution.
+
+    Runs the PDF ingestion pipeline, logs exceptions if any error occurs.
+    """
     try:
         ingest_pdf()
     except Exception as e:
-        logger.exception("PDF ingestion failed due to an error: %s", e)
+        logger.exception(f"PDF ingestion failed due to an error: {e}")
