@@ -8,7 +8,7 @@ from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
 
 load_dotenv()
-REQUIRED_ENV_VARS = ["PDF_PATH", "PGVECTOR_URL", "PGVECTOR_COLLECTION"]
+REQUIRED_ENV_VARS = ["PDF_PATH", "DATABASE_URL", "PG_VECTOR_COLLECTION_NAME"]
 
 
 def validate_env():
@@ -92,8 +92,8 @@ def store_documents(docs):
     """
     logger.info("Initializing embedding and database storage pipeline...")
     model_name = os.getenv("OPENAI_MODEL", "text-embedding-3-small")
-    collection_name = os.getenv("PGVECTOR_COLLECTION")
-    db_url = os.getenv("PGVECTOR_URL")
+    collection_name = os.getenv("PG_VECTOR_COLLECTION_NAME")
+    db_url = os.getenv("DATABASE_URL")
 
     logger.info(f"Using OpenAI embedding model: {model_name}")
     logger.info(f"Target PGVector collection: {collection_name}")
