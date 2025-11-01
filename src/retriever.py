@@ -41,7 +41,7 @@ class PostgresVectorRetriever(DocumentRetriever):
             use_jsonb=True,
         )
 
-    def retrieve(self, question: str, k: int = 3) -> List[Tuple[Document, float]]:
+    def retrieve(self, question: str, k: int = 10) -> List[Tuple[Document, float]]:
         """
         Busca os k documentos mais semelhantes à pergunta informada.
 
@@ -63,7 +63,7 @@ class PostgresVectorRetriever(DocumentRetriever):
             logger.exception("Erro ao recuperar documentos do banco vetorial")
             return []
 
-    def retrieve_context(self, question: str, k: int = 3) -> str:
+    def retrieve_context(self, question: str, k: int = 10) -> str:
         """
         Retorna um texto consolidado com o conteúdo dos documentos mais relevantes.
 
